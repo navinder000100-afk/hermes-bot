@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 from flask import Flask, request
 from groq import Groq
@@ -20,14 +21,18 @@ def home():
 @app.route('/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     data = request.get_json()
-    print(f"📥 RECEIVED DATA: {data}")
+    print(f"📥 RECEIVED DATA: {data}", flush=True)
     
-    if data and "message" in data and "text" in data["message"]:
+    if data and "message" in data:
         chat_id = data["message"]["chat"]["id"]
-        user_text = data["message"]["text"]
+        user_text = data["message"].get("text", "")
         
         # Skip VIP Channel messages
         if str(chat_id) == str(VIP_CHANNEL_ID):
+            return "OK", 200
+
+        if not user_text:
+            print("⚠️ Message has no text content.", flush=True)
             return "OK", 200
 
         # Generate response using Groq AI
@@ -41,8 +46,8 @@ def telegram_webhook():
             )
             ai_reply = completion.choices[0].message.content
         except Exception as e:
-            print(f"❌ GROQ ERROR: {e}")
-            ai_reply = "Hello! I received your message."
+            print(f"❌ GROQ ERROR: {e}", flush=True)
+            ai_reply = "Hello! Thanks for reaching out. How can I help you today?"
 
         # Send response back to Telegram
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -50,9 +55,9 @@ def telegram_webhook():
         
         try:
             resp = requests.post(url, json=payload, timeout=10)
-            print(f"📤 TELEGRAM STATUS: {resp.status_code} | RESPONSE: {resp.text}")
+            print(f"📤 TELEGRAM STATUS: {resp.status_code} | RESPONSE: {resp.text}", flush=True)
         except Exception as err:
-            print(f"❌ SEND FAILED: {err}")
+            print(f"❌ SEND FAILED: {err}", flush=True)
 
     return "OK", 200
 
