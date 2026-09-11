@@ -15,18 +15,18 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 
 @app.route('/')
 def home():
-    return "🚀 Hermes Sales Ecosystem is Active!"
+    return "🚀 Hermes Sales Ecosystem Active!"
 
 @app.route('/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     data = request.get_json()
-    print(f"📥 Received Webhook Data: {data}")
+    print(f"📥 RECEIVED DATA: {data}")
     
     if data and "message" in data and "text" in data["message"]:
         chat_id = data["message"]["chat"]["id"]
         user_text = data["message"]["text"]
         
-        # Ignore VIP Channel posts
+        # Skip VIP Channel messages
         if str(chat_id) == str(VIP_CHANNEL_ID):
             return "OK", 200
 
@@ -41,22 +41,18 @@ def telegram_webhook():
             )
             ai_reply = completion.choices[0].message.content
         except Exception as e:
-            print(f"❌ Groq API Error: {e}")
-            ai_reply = "Hello! I received your message. How can I assist you today?"
+            print(f"❌ GROQ ERROR: {e}")
+            ai_reply = "Hello! I received your message."
 
         # Send response back to Telegram
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": chat_id,
-            "text": ai_reply
-        }
-        headers = {"Content-Type": "application/json"}
+        payload = {"chat_id": chat_id, "text": ai_reply}
         
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=10)
-            print(f"📤 Telegram Status: {resp.status_code} | Response: {resp.text}")
+            resp = requests.post(url, json=payload, timeout=10)
+            print(f"📤 TELEGRAM STATUS: {resp.status_code} | RESPONSE: {resp.text}")
         except Exception as err:
-            print(f"❌ Failed to send message to Telegram: {err}")
+            print(f"❌ SEND FAILED: {err}")
 
     return "OK", 200
 
