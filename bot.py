@@ -1,3 +1,18 @@
+import os
+from flask import Flask
+from threading import Thread
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
+Thread(target=run).start()
+
 import requests, time, re, os, urllib.parse, threading
 
 TELEGRAM_TOKEN = "8683493983:AAGNxjjSLa0gFb6adEP5bs5yT_RpqkhrIV0"
