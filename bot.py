@@ -1,17 +1,15 @@
 import os
-import sys
 import requests
 from flask import Flask, request
 from groq import Groq
 
 app = Flask(__name__)
 
-# Fetch environment variables
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-VIP_CHANNEL_ID = os.environ.get('VIP_CHANNEL_ID')
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+# Credentials hardcoded safely to prevent Render Env 404 URL bugs
+TELEGRAM_TOKEN = "8683493983:AAEiQT-uab-W0xLLtccda0j7_rKTLiJbFDE"
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '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')
+VIP_CHANNEL_ID = "-1004429254980"
 
-# Initialize Groq client
 groq_client = Groq(api_key=GROQ_API_KEY)
 
 @app.route('/')
@@ -27,18 +25,17 @@ def telegram_webhook():
         chat_id = data["message"]["chat"]["id"]
         user_text = data["message"].get("text", "")
         
-        # Skip VIP Channel messages
+        # Ignore VIP Channel posts
         if str(chat_id) == str(VIP_CHANNEL_ID):
             return "OK", 200
 
         if not user_text:
-            print("⚠️ Message has no text content.", flush=True)
             return "OK", 200
 
-        # Generate response using Groq AI
+        # Generate AI response using active Groq Llama 3.1 model
         try:
             completion = groq_client.chat.completions.create(
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
                 messages=[
                     {"role": "system", "content": "You are an expert sales AI assistant. Help clients directly with quick, professional, and clear answers."},
                     {"role": "user", "content": user_text}
@@ -47,10 +44,10 @@ def telegram_webhook():
             ai_reply = completion.choices[0].message.content
         except Exception as e:
             print(f"❌ GROQ ERROR: {e}", flush=True)
-            ai_reply = "Hello! Thanks for reaching out. How can I help you today?"
+            ai_reply = "Hello! Thanks for reaching out. How can I assist you today?"
 
-        # Send response back to Telegram
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        # Send Telegram DM
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN.strip()}/sendMessage"
         payload = {"chat_id": chat_id, "text": ai_reply}
         
         try:
