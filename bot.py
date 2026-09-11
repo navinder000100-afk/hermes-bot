@@ -24,6 +24,34 @@ def run_flask():
 # Run server in a background thread
 Thread(target=run_flask).start()
 
+# ==========================================
+# TELEGRAM WEBHOOK FOR PERSONAL DM AI REPLIES
+# ==========================================
+@app.route('/telegram-webhook', methods=['POST'])
+def telegram_webhook():
+    data = request.get_json()
+    
+    if data and "message" in data and "text" in data["message"]:
+        chat_id = data["message"]["chat"]["id"]
+        user_text = data["message"]["text"]
+        
+        # 1. Groq AI से Reply जनरेट करें
+        try:
+            completion = groq_client.chat.completions.create(
+                model="llama3-8b-8192",
+                messages=[{"role": "user", "content": user_text}]
+            )
+            ai_reply = completion.choices[0].message.content
+        except Exception as e:
+            ai_reply = "Hello! I am receiving your message. How can I help you today?"
+
+        # 2. Direct DM Reply भेजें
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {"chat_id": chat_id, "text": ai_reply}
+        requests.post(url, json=payload)
+
+    return "OK", 200
+        
 # ---------------------------------------------------------
 # 2. ENVIRONMENT VARIABLES
 # ---------------------------------------------------------
