@@ -107,6 +107,6 @@ def handle_incoming_messages(message):
 # --- START BOT ---
 if __name__ == "__main__":
     print("🚀 Removing Webhook and Starting Bot...")
-    bot.remove_webhook()
-    bot.infinity_polling(skip_pending_updates=True)
+    bot.remove_webhook(drop_pending_updates=True)
+    bot.infinity_polling()
     
