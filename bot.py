@@ -10,10 +10,11 @@ TELEGRAM_TOKEN = "8683493983:AAEiQT-uab-W0xLLtccda0j7_rKTLiJbFDE"
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 VIP_CHANNEL_ID = "-1004429254980"
 
-# Gemini AI Setup
+# Gemini AI Setup (Gemini 3.6 / Latest Preview Model)
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Gemini 3.6 model string
+    model = genai.GenerativeModel('gemini-3-flash-preview')
 
 @app.route('/')
 def home():
@@ -35,7 +36,7 @@ def telegram_webhook():
         if not user_text:
             return "OK", 200
 
-        # Generate AI response using Gemini
+        # Generate AI response using Gemini 3.6
         try:
             response = model.generate_content(
                 f"You are Hermes AI Agent, an expert freelance generation assistant. Answer accurately and concisely: {user_text}"
@@ -60,4 +61,3 @@ def telegram_webhook():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-    
