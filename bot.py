@@ -13,10 +13,10 @@ CHANNEL_ID = os.getenv("CHANNEL_ID")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Initialize Gemini AI
+# Initialize Gemini AI with requested model
 genai.configure(api_key=GEMINI_API_KEY)
 generation_config = {"temperature": 0.7, "max_output_tokens": 1500}
-model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
+model = genai.GenerativeModel(model_name="gemini-3.6-flash", generation_config=generation_config)
 
 bot = telebot.TeleBot(BOT_TOKEN)
 PAID_USERS = []
@@ -29,7 +29,7 @@ def send_welcome(message):
     if not is_paid(message.from_user.id):
         bot.reply_to(message, "🔒 Access Denied. Use /pay for subscription.")
         return
-    bot.reply_to(message, "🚀 **Hermes AI (Gemini Powered)** is active! Koi bhi coding task, script generation, ya sawal pucho.")
+    bot.reply_to(message, "🚀 **Hermes AI (Gemini 3.6 Powered)** is active! Koi bhi coding task, script generation, ya sawal pucho.")
 
 @bot.message_handler(commands=['pay'])
 def pay_info(message):
@@ -48,7 +48,6 @@ def add_paid(message):
     else:
         bot.reply_to(message, "Permission denied.")
 
-# Background automated lead/data scraper loop
 def background_lead_scraper():
     while True:
         try:
@@ -68,7 +67,6 @@ def handle_ai_and_scraping(message):
     
     query = message.text.strip()
     
-    # Agar user link bhejega toh web scraping karega, warna Gemini AI se response dega
     if query.startswith("http://") or query.startswith("https://"):
         try:
             res = requests.get(query, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
@@ -79,11 +77,9 @@ def handle_ai_and_scraping(message):
             bot.reply_to(message, f"❌ Scraping Error: `{e}`", parse_mode="Markdown")
     else:
         try:
-            # Gemini AI generation call
             response = model.generate_content(query)
             ai_reply = response.text
             
-            # Telegram message limit 4096 characters hoti hai, safe split ya trim kar sakte hain
             if len(ai_reply) > 4000:
                 ai_reply = ai_reply[:4000] + "\n\n*(Truncated due to length)*"
                 
@@ -111,3 +107,4 @@ if __name__ == "__main__":
     bot.remove_webhook()
     print("Starting Gemini Telegram bot polling...")
     bot.infinity_polling(skip_pending=True)
+    
