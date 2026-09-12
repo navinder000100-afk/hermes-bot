@@ -9,8 +9,8 @@ TELEGRAM_TOKEN = "8683493983:AAEiQT-uab-W0xLLtccda0j7_rKTLiJbFDE"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 ADMIN_ID = 8104262282
 
-# Yahan apna Telegram Group ya Channel Chat ID daalein (jaise -100xxxxxxxxxx)
-GROUP_CHAT_ID = os.environ.get("GROUP_CHAT_ID", "YOUR_GROUP_CHAT_ID")
+# Teri group ID yahan set kar di hai
+GROUP_CHAT_ID = -1004429254980
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
@@ -65,9 +65,8 @@ def run_lead_scraper():
             try:
                 r = requests.get("https://www.upwork.com/ab/feed/jobs/rss?q=python&sort=recency", timeout=10)
                 if r.status_code == 200 and "<item>" in r.text:
-                    # Basic XML parsing for RSS items
                     items = r.text.split("<item>")
-                    for item in items[1:4]: # Top 3 latest
+                    for item in items[1:4]:
                         if "<title>" in item and "<link>" in item:
                             title = item.split("<title>")[1].split("</title>")[0].replace("<![CDATA[", "").replace("]]>", "")
                             link = item.split("<link>")[1].split("</link>")[0].strip()
@@ -78,16 +77,14 @@ def run_lead_scraper():
                 print(f"Upwork Scraper Error: {e}")
 
             # Send accumulated leads to Telegram Group
-            if GROUP_CHAT_ID != "YOUR_GROUP_CHAT_ID":
-                for lead_id, lead_msg in leads:
-                    try:
-                        bot.send_message(GROUP_CHAT_ID, lead_msg, parse_mode="Markdown")
-                        mark_as_sent(lead_id)
-                        time.sleep(3) # Anti-spam delay
-                    except Exception as e:
-                        print(f"Telegram Send Error: {e}")
+            for lead_id, lead_msg in leads:
+                try:
+                    bot.send_message(GROUP_CHAT_ID, lead_msg, parse_mode="Markdown")
+                    mark_as_sent(lead_id)
+                    time.sleep(3)
+                except Exception as e:
+                    print(f"Telegram Send Error: {e}")
 
-            # Check for new leads every 15 minutes
             time.sleep(900)
         except Exception as e:
             print(f"Scraper General Error: {e}")
@@ -141,7 +138,7 @@ def handle_incoming_messages(message):
         UPI_ID = "navinder000100@oksbi"
         AMOUNT = "299"
         QR_URL = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa={UPI_ID}%26pn=HermesAI%26am={AMOUNT}%26cu=INR"
-        bot.send_photo(message.chat.id, QR_URL, caption=f"⚡ Pay ₹{AMOUNT} to UPI `{UPI_ID}` and reply with UTR/Paid.", parse_Mode="Markdown")
+        bot.send_photo(message.chat.id, QR_URL, caption=f"⚡ Pay ₹{AMOUNT} to UPI `{UPI_ID}` and reply with UTR/Paid.", parse_mode="Markdown")
 
 def run_bot():
     print("🚀 Starting Telegram Bot Polling...")
@@ -159,4 +156,4 @@ if __name__ == "__main__":
 
     # 2. Telegram Bot Thread
     run_bot()
-            
+                        
