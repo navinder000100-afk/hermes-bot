@@ -50,17 +50,52 @@ def add_paid(message):
     else:
         bot.reply_to(message, "Permission denied.")
 
-# Background automated lead scraper loop for channel
+# Expanded multi-source scraper for maximum real-time remote leads
 def background_lead_scraper():
+    seen_links = set()
+    
+    sources = [
+        {"name": "We Work Remotely", "url": "https://weworkremotely.com/remote-jobs.rss"},
+        {"name": "RemoteOK", "url": "https://remoteok.com/rss"},
+        {"name": "Jobspresso", "url": "https://jobspresso.co/feed/"},
+        {"name": "Working Nomads", "url": "https://www.workingnomads.com/jobs.rss"},
+        {"name": "Authentic Jobs", "url": "https://authenticjobs.com/feed/"}
+    ]
+    
     while True:
-        try:
-            time.sleep(60)
-            if CHANNEL_ID:
-                live_lead = "🔥 **Live Scraped Lead / Alert**\n\n• Source: Target API/Site\n• Status: Active & Verified"
-                bot.send_message(CHANNEL_ID, live_lead, parse_mode="Markdown")
-        except Exception as e:
-            print(f"Scraper error: {e}")
-            time.sleep(10)
+        for src in sources:
+            try:
+                res = requests.get(src["url"], timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+                if res.status_code == 200:
+                    soup = BeautifulSoup(res.text, 'xml')
+                    items = soup.find_all('item')[:2]
+                    
+                    for item in items:
+                        title = item.title.text if item.title else "Remote Job"
+                        link = item.link.text if item.link else ""
+                        
+                        if link and link not in seen_links:
+                            seen_links.add(link)
+                            if len(seen_links) > 150:
+                                seen_links.pop()
+                                
+                            prompt = f"Write a short, high-converting outreach proposal for this job opportunity: {title}. Keep it professional with a call to action."
+                            ai_pitch = model.generate_content(prompt).text.strip()
+                            
+                            lead_msg = (
+                                f"🔥 **New Live Scraped Lead!**\n\n"
+                                f"🌐 **Source:** {src['name']}\n"
+                                f"📌 **Job:** {title}\n"
+                                f"🔗 **Link:** {link}\n\n"
+                                f"📝 **Ready Proposal (Copy & Send):**\n`{ai_pitch}`\n\n"
+                                f"🎯 **Action:** Click the link, paste the pitch, and secure the lead!"
+                            )
+                            if CHANNEL_ID:
+                                bot.send_message(CHANNEL_ID, lead_msg)
+            except Exception as e:
+                print(f"Scraper error on {src['name']}: {e}")
+                
+        time.sleep(120)
 
 @bot.message_handler(func=lambda message: True)
 def handle_ai_and_scraping(message):
@@ -94,7 +129,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Hermes Webhook Engine is live!"
+    return "Hermes Multi-Source Engine is live!"
 
 script_secret_path = f"/{BOT_TOKEN}"
 
@@ -109,7 +144,6 @@ def webhook():
         return "Invalid", 403
 
 if __name__ == "__main__":
-    # Start background lead scraper thread
     scraper_thread = threading.Thread(target=background_lead_scraper, daemon=True)
     scraper_thread.start()
     
@@ -121,3 +155,4 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+        
