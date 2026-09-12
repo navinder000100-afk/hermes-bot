@@ -26,12 +26,17 @@ def save_chat_id(chat_id):
         with open(USERS_FILE, "a") as f:
             f.write(f"{chat_id_str}\n")
 
-# --- BACKGROUND LEAD SCRAPER ---
+# --- BACKGROUND LEAD SCRAPER (Yahan apna scraper logic dalein) ---
 def run_lead_scraper():
     print("🚀 Background Lead Scraper Started...")
     while True:
         try:
-            # Yahan apna scraping ka code likhein
+            # === APNA SCRAPING CODE YAHAN LIKHEIN ===
+            # Example: 
+            # leads = fetch_leads_from_target_website()
+            # save_or_send_leads(leads)
+            
+            # Har 30 minute mein run karne ke liye delay
             time.sleep(1800)
         except Exception as e:
             print(f"Scraper Error: {e}")
@@ -97,11 +102,11 @@ def run_bot():
     bot.infinity_polling()
 
 if __name__ == "__main__":
-    # Start Scraper in Background Thread
+    # 1. Scraper Background Thread Start Karein
     scraper_thread = threading.Thread(target=run_lead_scraper)
     scraper_thread.daemon = True
     scraper_thread.start()
 
-    # Start Telegram Bot
+    # 2. Telegram Bot Start Karein
     run_bot()
     
