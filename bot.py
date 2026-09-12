@@ -7,10 +7,10 @@ import google.generativeai as genai
 
 # Environment Variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
+UPI_ID = os.getenv("UPI_ID", "yourname@upi")
 
 # Initialize Gemini AI (Gemini 3.6 configuration)
 genai.configure(api_key=GEMINI_API_KEY)
@@ -32,7 +32,7 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['pay'])
 def pay_info(message):
-    bot.reply_to(message, "💳 Send payment to UPI: `yourname@upi` and share screenshot with admin for activation.")
+    bot.reply_to(message, f"💳 Send payment to UPI ID: `{UPI_ID}` and share screenshot with admin for activation.")
 
 @bot.message_handler(commands=['addpaid'])
 def add_paid(message):
@@ -71,7 +71,6 @@ def handle_ai_and_scraping(message):
             if len(ai_reply) > 4000:
                 ai_reply = ai_reply[:4000] + "\n\n*(Truncated due to length)*"
                 
-            # Plain text response to avoid markdown entity parsing crash on code blocks
             bot.reply_to(message, ai_reply)
         except Exception as e:
             bot.reply_to(message, f"❌ AI Generation Error: `{e}`")
