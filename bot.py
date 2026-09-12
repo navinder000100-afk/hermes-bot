@@ -1,69 +1,115 @@
 import os
-import requests
-from flask import Flask, request
-import google.generativeai as genai
+import telebot
+from google import genai
+from google.genai import types
 
-app = Flask(__name__)
-
-# Credentials
+# --- CONFIGURATION ---
 TELEGRAM_TOKEN = "8683493983:AAEiQT-uab-W0xLLtccda0j7_rKTLiJbFDE"
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-VIP_CHANNEL_ID = "-1004429254980"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # Render Environment Variable se key uthayega
+ADMIN_ID = 123456789  # Replace this with your numeric Telegram User ID (get it from @userinfobot)
 
-# Payment Details
 UPI_ID = "navinder000100@oksbi"
-PRICE = "₹299"
-QR_IMAGE_URL = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=navinder000100@oksbi&pn=Hermes&am=299&cu=INR"
+AMOUNT = "299"
+PAYMENT_QR_URL = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa={UPI_ID}%26pn=HermesAI%26am={AMOUNT}%26cu=INR"
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-3-flash-preview')
+# Initialize Bots
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
+ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
-@app.route('/')
-def home():
-    return "🚀 Hermes Sales Ecosystem Active!"
+USERS_FILE = "users.txt"
 
-@app.route('/telegram-webhook', methods=['POST'])
-def telegram_webhook():
-    data = request.get_json()
-    if not data or "message" not in data:
-        return "OK", 200
+# --- HELPER FUNCTIONS ---
+def save_chat_id(chat_id):
+    """Saves user or group chat_id for broadcasting"""
+    chat_id_str = str(chat_id)
+    users = []
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            users = f.read().splitlines()
+    if chat_id_str not in users:
+        with open(USERS_FILE, "a") as f:
+            f.write(f"{chat_id_str}\n")
 
-    chat_id = data["message"]["chat"]["id"]
-    user_text = data["message"].get("text", "")
+# --- BOT HANDLERS ---
 
-    if str(chat_id) == str(VIP_CHANNEL_ID) or not user_text:
-        return "OK", 200
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    save_chat_id(message.chat.id)
+    welcome_msg = (
+        "🤖 **Welcome to Hermes AI Freelance Agent!**\n\n"
+        "I can build custom Python Web Scrapers, Automation Scripts, and Fix Code Bugs instantly.\n\n"
+        "📌 **How it works:**\n"
+        "1. Describe your script/automation requirement in detail.\n"
+        "2. Get an instant payment request of ₹299.\n"
+        "3. Pay & receive fully optimized, executable Python code immediately!"
+    )
+    bot.reply_to(message, welcome_msg, parse_mode="Markdown")
 
-    # 1. Payment/UTR Verification Check
-    if any(keyword in user_text.lower() for keyword in ["utr", "paid", "payment", "done"]):
-        solution_prompt = f"Provide the complete production-ready Python solution for this request: {user_text}"
+@bot.message_handler(commands=['broadcast'])
+def handle_broadcast(message):
+    """Admin-only command to broadcast promotional messages to all users/groups"""
+    if message.from_user.id != ADMIN_ID:
+        bot.reply_to(message, "❌ **Access Denied!** You are not authorized to run broadcasts.")
+        return
+    
+    # Extract promo message text
+    promo_text = message.text.replace("/broadcast", "").strip()
+    if not promo_text:
+        bot.reply_to(message, "⚠️ **Usage:** `/broadcast Your promotional text here`", parse_mode="Markdown")
+        return
+        
+    if not os.path.exists(USERS_FILE):
+        bot.reply_to(message, "⚠️ No registered users or groups found to broadcast.")
+        return
+
+    with open(USERS_FILE, "r") as f:
+        users = f.read().splitlines()
+        
+    success, failed = 0, 0
+    bot.send_message(message.chat.id, f"🚀 **Starting Broadcast to {len(users)} target chats...**")
+    
+    for user_id in users:
         try:
-            solution = model.generate_content(solution_prompt).text
+            bot.send_message(user_id, promo_text, parse_mode="Markdown")
+            success += 1
         except Exception:
-            solution = "Here is your customized code solution."
+            failed += 1
+            
+    bot.reply_to(message, f"✅ **Broadcast Complete!**\n\n🟢 Successfully Sent: {success}\n🔴 Failed/Blocked: {failed}")
 
-        payload_text = f"✅ **Payment Verified!** Here is your solution:\n\nPRICE: 299\n\nSUMMARY: {solution}"
-        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": payload_text, "parse_mode": "Markdown"})
-        return "OK", 200
+@bot.message_handler(func=lambda message: True)
+def handle_incoming_messages(message):
+    save_chat_id(message.chat.id)
+    text = message.text.lower()
+    
+    # Keyword detection for Payment / UTR verification
+    if any(keyword in text for keyword in ["utr", "paid", "payment done", "transaction", "done", "paid ₹299"]):
+        bot.reply_to(message, "⏳ **Payment Received & Verified!** Generating your high-performance Python script via Gemini AI...")
+        
+        try:
+            # AI Prompting via Gemini 3-Flash-Preview
+            prompt = f"Write a complete, production-ready, well-commented Python script for this task: '{message.text}'. Provide only the Python code block with installation steps if needed."
+            response = ai_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt,
+            )
+            bot.reply_to(message, f"✅ **Here is your solution:**\n\n{response.text}", parse_mode="Markdown")
+        except Exception as e:
+            bot.reply_to(message, f"❌ Error generating solution: {str(e)}. Please contact admin.")
+            
+    else:
+        # Step 1: Push Instant Pricing QR Code to Client
+        caption_text = (
+            f"⚡ **Task Accepted!**\n\n"
+            f"To generate and receive your fully automated script, complete the single task payment:\n\n"
+            f"💰 **Amount:** ₹{AMOUNT}\n"
+            f"📌 **UPI ID:** `{UPI_ID}`\n\n"
+            f"Scan the QR code above to pay. After payment, **reply with your UTR / Transaction ID or type 'Paid'** to get instant code delivery!"
+        )
+        bot.send_photo(message.chat.id, PAYMENT_QR_URL, caption=caption_text, parse_mode="Markdown")
 
-    # 2. Generate Proposal & Send QR Code
-    caption = (
-        f"💳 **Order Proposal Generated!**\n\n"
-        f"Price: **{PRICE}**\n"
-        f"UPI ID: `{UPI_ID}`\n\n"
-        f"1️⃣ Pay **{PRICE}** using UPI.\n"
-        f"2️⃣ Reply with UTR after payment."
-    )
-
-    requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
-        json={"chat_id": chat_id, "photo": QR_IMAGE_URL, "caption": caption, "parse_mode": "Markdown"}
-    )
-
-    return "OK", 200
-
+# --- START BOT ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    print("🚀 Hermes Telegram Bot with Auto-Broadcast is Running...")
+    bot.infinity_polling()
     
