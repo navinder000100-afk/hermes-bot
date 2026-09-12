@@ -6,7 +6,7 @@ from google.genai import types
 # --- CONFIGURATION ---
 TELEGRAM_TOKEN = "8683493983:AAEiQT-uab-W0xLLtccda0j7_rKTLiJbFDE"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")  # Render Environment Variable se key uthayega
-ADMIN_ID = 123456789  # Replace this with your numeric Telegram User ID (get it from @userinfobot)
+ADMIN_ID = 8104262282  # Aapki Admin User ID yahan set ho gayi hai
 
 UPI_ID = "navinder000100@oksbi"
 AMOUNT = "299"
@@ -87,7 +87,7 @@ def handle_incoming_messages(message):
         bot.reply_to(message, "⏳ **Payment Received & Verified!** Generating your high-performance Python script via Gemini AI...")
         
         try:
-            # AI Prompting via Gemini 3-Flash-Preview
+            # AI Prompting via Gemini 2.5 Flash
             prompt = f"Write a complete, production-ready, well-commented Python script for this task: '{message.text}'. Provide only the Python code block with installation steps if needed."
             response = ai_client.models.generate_content(
                 model='gemini-2.5-flash',
@@ -112,4 +112,3 @@ def handle_incoming_messages(message):
 if __name__ == "__main__":
     print("🚀 Hermes Telegram Bot with Auto-Broadcast is Running...")
     bot.infinity_polling()
-    
