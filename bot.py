@@ -1,16 +1,19 @@
 import os
 import requests
 from flask import Flask, request
-from groq import Groq
+import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Credentials hardcoded safely to prevent Render Env 404 URL bugs
+# Credentials
 TELEGRAM_TOKEN = "8683493983:AAEiQT-uab-W0xLLtccda0j7_rKTLiJbFDE"
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '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')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 VIP_CHANNEL_ID = "-1004429254980"
 
-groq_client = Groq(api_key=GROQ_API_KEY)
+# Gemini AI Setup
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
 @app.route('/')
 def home():
@@ -20,11 +23,11 @@ def home():
 def telegram_webhook():
     data = request.get_json()
     print(f"📥 RECEIVED DATA: {data}", flush=True)
-    
+
     if data and "message" in data:
         chat_id = data["message"]["chat"]["id"]
         user_text = data["message"].get("text", "")
-        
+
         # Ignore VIP Channel posts
         if str(chat_id) == str(VIP_CHANNEL_ID):
             return "OK", 200
@@ -32,27 +35,23 @@ def telegram_webhook():
         if not user_text:
             return "OK", 200
 
-        # Generate AI response using active Groq Llama 3.1 model
+        # Generate AI response using Gemini
         try:
-            completion = groq_client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": "You are an expert sales AI assistant. Help clients directly with quick, professional, and clear answers."},
-                    {"role": "user", "content": user_text}
-                ]
+            response = model.generate_content(
+                f"You are Hermes AI Agent, an expert freelance generation assistant. Answer accurately and concisely: {user_text}"
             )
-            ai_reply = completion.choices[0].message.content
+            ai_reply = response.text
         except Exception as e:
-            print(f"❌ GROQ ERROR: {e}", flush=True)
-            ai_reply = "Hello! Thanks for reaching out. How can I assist you today?"
+            print(f"❌ GEMINI ERROR: {e}", flush=True)
+            ai_reply = f"⚠️ Gemini AI Error: {e}"
 
         # Send Telegram DM
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN.strip()}/sendMessage"
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         payload = {"chat_id": chat_id, "text": ai_reply}
-        
+
         try:
-            resp = requests.post(url, json=payload, timeout=10)
-            print(f"📤 TELEGRAM STATUS: {resp.status_code} | RESPONSE: {resp.text}", flush=True)
+            resp = requests.post(url, json=payload)
+            print(f"📤 TELEGRAM STATUS: {resp.status_code}", flush=True)
         except Exception as err:
             print(f"❌ SEND FAILED: {err}", flush=True)
 
