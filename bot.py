@@ -107,6 +107,9 @@ def handle_incoming_messages(message):
 # --- START BOT ---
 if __name__ == "__main__":
     print("🚀 Removing Webhook and Starting Bot...")
-    bot.remove_webhook(drop_pending_updates=True)
+    try:
+        bot.delete_webhook(drop_pending_updates=True)
+    except Exception as e:
+        print(f"Webhook cleanup note: {e}")
     bot.infinity_polling()
     
