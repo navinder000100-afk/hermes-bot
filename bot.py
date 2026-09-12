@@ -1,4 +1,4 @@
-okimport os
+import os
 import threading
 import time
 import requests
@@ -16,7 +16,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # Initialize Gemini AI
 genai.configure(api_key=GEMINI_API_KEY)
 generation_config = {"temperature": 0.7, "max_output_tokens": 1500}
-model = genai.GenerativeModel(model_name="gemini-1.5-flash", generation_config=generation_config)
+model = genai.GenerativeModel(model_name="gemini-3.6-flash", generation_config=generation_config)
 
 bot = telebot.TeleBot(BOT_TOKEN)
 PAID_USERS = []
@@ -29,7 +29,7 @@ def send_welcome(message):
     if not is_paid(message.from_user.id):
         bot.reply_to(message, "🔒 Access Denied. Use /pay for subscription.")
         return
-    bot.reply_to(message, "🚀 **Hermes AI Engine** is active! Koi bhi coding task, script generation, ya sawal pucho.")
+    bot.reply_to(message, "🚀 **Hermes AI Engine (Gemini 3.6)** is active! Koi bhi coding task, script generation, ya sawal pucho.")
 
 @bot.message_handler(commands=['pay'])
 def pay_info(message):
@@ -104,8 +104,7 @@ if __name__ == "__main__":
     scraper_thread = threading.Thread(target=background_lead_scraper, daemon=True)
     scraper_thread.start()
     
-    # Conflict Fix: Clears any stuck polling sessions or webhooks automatically
     bot.delete_webhook(drop_pending_updates=True)
     print("Starting Gemini Telegram bot polling...")
     bot.infinity_polling(skip_pending=True, timeout=90, long_polling_timeout=5)
-    
+                
