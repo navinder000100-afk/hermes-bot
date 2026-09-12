@@ -1,5 +1,7 @@
 import os
+import threading
 import telebot
+from flask import Flask
 from google import genai
 from google.genai import types
 
@@ -12,11 +14,17 @@ UPI_ID = "navinder000100@oksbi"
 AMOUNT = "299"
 PAYMENT_QR_URL = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa={UPI_ID}%26pn=HermesAI%26am={AMOUNT}%26cu=INR"
 
-# Initialize Bots
+# Initialize Bots & Flask
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
+app = Flask(__name__)
 
 USERS_FILE = "users.txt"
+
+# --- FLASK WEB ROUTE (To prevent Render Timeout) ---
+@app.route('/')
+def home():
+    return "Hermes AI Freelance Bot is running live!"
 
 # --- HELPER FUNCTIONS ---
 def save_chat_id(chat_id):
@@ -104,12 +112,23 @@ def handle_incoming_messages(message):
         )
         bot.send_photo(message.chat.id, PAYMENT_QR_URL, caption=caption_text, parse_mode="Markdown")
 
-# --- START BOT ---
-if __name__ == "__main__":
-    print("🚀 Removing Webhook and Starting Bot...")
+# --- BACKGROUND BOT THREAD ---
+def run_bot():
+    print("🚀 Starting Telegram Bot Polling...")
     try:
-        bot.delete_webhook(drop_pending_updates=True)
-    except Exception as e:
-        print(f"Webhook cleanup note: {e}")
+        bot.delete_webhook()
+    except Exception:
+        pass
     bot.infinity_polling()
+
+# --- START APP ---
+if __name__ == "__main__":
+    # Start Telegram Bot in a separate background thread so Flask can handle Render's web port check
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+    
+    # Run Flask Web Server on port 10000 (Render standard)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
     
