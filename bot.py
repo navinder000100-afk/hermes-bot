@@ -3,7 +3,6 @@ import threading
 from flask import Flask
 import telebot
 
-# Telegram Bot Setup
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -11,7 +10,6 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def send_welcome(message):
     bot.reply_to(message, "Hermes AI is active and running!")
 
-# Flask Web Server Setup (Render port requirement ke liye)
 app = Flask(__name__)
 
 @app.route('/')
@@ -23,12 +21,12 @@ def run_flask():
     app.run(host="0.0.0.0", port=port, use_reloader=False)
 
 if __name__ == "__main__":
-    # Flask ko background thread mein daal diya
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
-    print("Flask server started in background thread.")
-
-    # Main thread mein Telegram bot polling chalegi
+    
+    # Purane webhook aur conflict ko hatane ke liye yeh line daal
+    bot.remove_webhook()
+    
     print("Starting Telegram bot polling...")
     bot.infinity_polling(skip_pending=True)
     
