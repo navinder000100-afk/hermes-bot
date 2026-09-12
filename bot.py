@@ -2,7 +2,7 @@ import os
 import threading
 import time
 import requests
-from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 from flask import Flask, request
 import telebot
 import google.generativeai as genai
@@ -50,7 +50,7 @@ def add_paid(message):
     else:
         bot.reply_to(message, "Permission denied.")
 
-# Fixed multi-source scraper that sends latest available leads instantly on start
+# Built-in XML ElementTree scraper to avoid missing library errors
 def background_lead_scraper():
     seen_links = set()
     first_run = True
@@ -68,12 +68,15 @@ def background_lead_scraper():
             try:
                 res = requests.get(src["url"], timeout=10, headers={"User-Agent": "Mozilla/5.0"})
                 if res.status_code == 200:
-                    soup = BeautifulSoup(res.text, 'xml')
-                    items = soup.find_all('item')[:2]
+                    root = ET.fromstring(res.content)
+                    items = root.findall(".//item")[:2]
                     
                     for item in items:
-                        title = item.title.text if item.title else "Remote Job"
-                        link = item.link.text if item.link else ""
+                        title_el = item.find('title')
+                        link_el = item.find('link')
+                        
+                        title = title_el.text if title_el is not None and title_el.text else "Remote Job"
+                        link = link_el.text if link_el is not None and link_el.text else ""
                         
                         if link:
                             if first_run:
@@ -164,4 +167,4 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-                        
+    
