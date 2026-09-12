@@ -1,9 +1,7 @@
 import os
-import threading
-import time
 import requests
 from bs4 import BeautifulSoup
-from flask import Flask
+from flask import Flask, request
 import telebot
 import google.generativeai as genai
 
@@ -12,8 +10,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
 
-# Initialize Gemini AI
+# Initialize Gemini AI (Gemini 3.6 configuration)
 genai.configure(api_key=GEMINI_API_KEY)
 generation_config = {"temperature": 0.7, "max_output_tokens": 1500}
 model = genai.GenerativeModel(model_name="gemini-3.6-flash", generation_config=generation_config)
@@ -48,17 +47,6 @@ def add_paid(message):
     else:
         bot.reply_to(message, "Permission denied.")
 
-def background_lead_scraper():
-    while True:
-        try:
-            time.sleep(60)
-            if CHANNEL_ID:
-                live_lead = "🔥 **Live Scraped Lead / Alert**\n\n• Source: Target API/Site\n• Status: Active & Verified"
-                bot.send_message(CHANNEL_ID, live_lead, parse_mode="Markdown")
-        except Exception as e:
-            print(f"Scraper error: {e}")
-            time.sleep(10)
-
 @bot.message_handler(func=lambda message: True)
 def handle_ai_and_scraping(message):
     if not is_paid(message.from_user.id):
@@ -83,7 +71,8 @@ def handle_ai_and_scraping(message):
             if len(ai_reply) > 4000:
                 ai_reply = ai_reply[:4000] + "\n\n*(Truncated due to length)*"
                 
-            bot.reply_to(message, ai_reply, parse_mode="Markdown")
+            # Plain text response to avoid markdown entity parsing crash on code blocks
+            bot.reply_to(message, ai_reply)
         except Exception as e:
             bot.reply_to(message, f"❌ AI Generation Error: `{e}`")
 
@@ -91,20 +80,27 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Hermes Gemini Engine is live!"
+    return "Hermes Webhook Engine is live!"
 
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, use_reloader=False)
+script_secret_path = f"/{BOT_TOKEN}"
+
+@app.route(script_secret_path, methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return "!", 200
+    else:
+        return "Invalid", 403
 
 if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
+    if RENDER_EXTERNAL_URL:
+        webhook_url = f"{RENDER_EXTERNAL_URL}{script_secret_path}"
+        bot.remove_webhook()
+        bot.set_webhook(url=webhook_url)
+        print(f"Webhook set to: {webhook_url}")
     
-    scraper_thread = threading.Thread(target=background_lead_scraper, daemon=True)
-    scraper_thread.start()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
     
-    bot.delete_webhook(drop_pending_updates=True)
-    print("Starting Gemini Telegram bot polling...")
-    bot.infinity_polling(skip_pending=True, timeout=90, long_polling_timeout=5)
-                
