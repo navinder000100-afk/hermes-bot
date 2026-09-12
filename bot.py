@@ -4,16 +4,12 @@ from flask import Flask
 import telebot
 
 # Telegram Bot Setup
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8683493983:AAEiQT-uab-W0xLLtccda0j7_rKTLiJbFDE")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     bot.reply_to(message, "Hermes AI is active and running!")
-
-@bot.message_handler(func=lambda message: True)
-def echo_all(message):
-    bot.reply_to(message, f"Got your message: {message.text}")
 
 # Flask Web Server Setup (Render port requirement ke liye)
 app = Flask(__name__)
