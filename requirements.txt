@@ -1,4 +1,7 @@
 pyTelegramBotAPI
-google-genai
+Flask
 requests
-flask
+beautifulsoup4
+google-generativeai
+
+
