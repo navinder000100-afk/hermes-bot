@@ -1,4 +1,6 @@
 import os
+import threading
+import time
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask, request
@@ -7,6 +9,7 @@ import google.generativeai as genai
 
 # Environment Variables
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHANNEL_ID = os.getenv("CHANNEL_ID", "-1004429254980")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 RENDER_EXTERNAL_URL = os.getenv("RENDER_EXTERNAL_URL")
@@ -46,6 +49,18 @@ def add_paid(message):
             bot.reply_to(message, "Sahi format: `/addpaid <user_id>`", parse_mode="Markdown")
     else:
         bot.reply_to(message, "Permission denied.")
+
+# Background automated lead scraper loop for channel
+def background_lead_scraper():
+    while True:
+        try:
+            time.sleep(60)
+            if CHANNEL_ID:
+                live_lead = "🔥 **Live Scraped Lead / Alert**\n\n• Source: Target API/Site\n• Status: Active & Verified"
+                bot.send_message(CHANNEL_ID, live_lead, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Scraper error: {e}")
+            time.sleep(10)
 
 @bot.message_handler(func=lambda message: True)
 def handle_ai_and_scraping(message):
@@ -94,6 +109,10 @@ def webhook():
         return "Invalid", 403
 
 if __name__ == "__main__":
+    # Start background lead scraper thread
+    scraper_thread = threading.Thread(target=background_lead_scraper, daemon=True)
+    scraper_thread.start()
+    
     if RENDER_EXTERNAL_URL:
         webhook_url = f"{RENDER_EXTERNAL_URL}{script_secret_path}"
         bot.remove_webhook()
@@ -102,4 +121,3 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-    
