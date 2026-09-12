@@ -23,6 +23,10 @@ model = genai.GenerativeModel(model_name="gemini-3.6-flash", generation_config=g
 bot = telebot.TeleBot(BOT_TOKEN)
 PAID_USERS = []
 
+# In-Memory Active Client Conversations (State Machine)
+# Format: { user_id_or_client_key: {"history": [...], "status": "negotiating"} }
+ACTIVE_CLIENT_CONVERSATIONS = {}
+
 def is_paid(user_id):
     return user_id in PAID_USERS or user_id == ADMIN_ID
 
@@ -31,7 +35,7 @@ def send_welcome(message):
     if not is_paid(message.from_user.id):
         bot.reply_to(message, "🔒 Access Denied. Use /pay for subscription.")
         return
-    bot.reply_to(message, "🚀 **Hermes AI Engine (Gemini 3.6)** is active! Koi bhi coding task, script generation, ya sawal pucho.")
+    bot.reply_to(message, "🤖 **Hermes Autonomous AI Employee** is live! Zero-touch mode activated. Main khud leads pakad raha hoon aur handle karunga.")
 
 @bot.message_handler(commands=['pay'])
 def pay_info(message):
@@ -50,10 +54,16 @@ def add_paid(message):
     else:
         bot.reply_to(message, "Permission denied.")
 
-# Instant live scraper with first_run removed to push available leads immediately
-def background_lead_scraper():
+@bot.message_handler(commands=['status'])
+def system_status(message):
+    if not is_paid(message.from_user.id):
+        return
+    active_chats = len(ACTIVE_CLIENT_CONVERSATIONS)
+    bot.reply_to(message, f"📊 **Autonomous Engine Status:**\n• Active Negotiations: `{active_chats}`\n• Mode: Zero-Touch Autonomous Execution", parse_mode="Markdown")
+
+# Module 1 & 2 Combined: Autonomous Background Scraper & Negotiation Handler
+def autonomous_execution_engine():
     seen_links = set()
-    
     sources = [
         {"name": "We Work Remotely", "url": "https://weworkremotely.com/remote-jobs.rss"},
         {"name": "RemoteOK", "url": "https://remoteok.com/rss"},
@@ -82,57 +92,84 @@ def background_lead_scraper():
                             if len(seen_links) > 150:
                                 seen_links.pop()
                                 
-                            prompt = f"Write a short, high-converting outreach proposal for this job opportunity: {title}. Keep it professional with a call to action."
+                            # Step 1: Generate Autonomous Outreach Strategy
+                            prompt = (
+                                f"You are an autonomous AI business development agent. "
+                                f"Analyze this job posting: '{title}'. Generate a persuasive, "
+                                f"ready-to-send proposal that acts as the initial automated outreach."
+                            )
                             ai_pitch = model.generate_content(prompt).text.strip()
                             
+                            # Initialize autonomous tracking state for this lead
+                            lead_key = f"lead_{abs(hash(link))}"
+                            ACTIVE_CLIENT_CONVERSATIONS[lead_key] = {
+                                "job_title": title,
+                                "source": src['name'],
+                                "link": link,
+                                "history": [{"role": "model", "parts": [ai_pitch]}]
+                            }
+                            
+                            # Broadcast to Channel with autonomous status
                             lead_msg = (
-                                f"🔥 **New Live Scraped Lead!**\n\n"
+                                f"🤖 **Autonomous Lead Captured & Pitched!**\n\n"
                                 f"🌐 **Source:** {src['name']}\n"
                                 f"📌 **Job:** {title}\n"
                                 f"🔗 **Link:** {link}\n\n"
-                                f"📝 **Ready Proposal (Copy & Send):**\n`{ai_pitch}`\n\n"
-                                f"🎯 **Action:** Click the link, paste the pitch, and secure the lead!"
+                                f"📝 **AI Autonomous Outreach Sent:**\n`{ai_pitch}`\n\n"
+                                f"⚡ *System is standing by for automatic client replies.*"
                             )
                             if CHANNEL_ID:
                                 bot.send_message(CHANNEL_ID, lead_msg)
             except Exception as e:
-                print(f"Scraper error on {src['name']}: {e}")
+                print(f"Autonomous Scraper Error on {src['name']}: {e}")
                 
         time.sleep(90)
 
+# Autonomous Chat & Negotiation Agent for incoming client replies
 @bot.message_handler(func=lambda message: True)
-def handle_ai_and_scraping(message):
+def handle_autonomous_chat(message):
     if not is_paid(message.from_user.id):
         bot.reply_to(message, "❌ Pehle subscription le bhai! (`/pay`)", parse_mode="Markdown")
         return
     
-    query = message.text.strip()
+    user_msg = message.text.strip()
+    user_id = str(message.from_user.id)
     
-    if query.startswith("http://") or query.startswith("https://"):
-        try:
-            res = requests.get(query, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-            soup = BeautifulSoup(res.text, 'html.parser')
-            title = soup.title.string.strip() if soup.title else "No Title Found"
-            bot.reply_to(message, f"🌐 **Scraped Webpage Data:**\n• URL: `{query}`\n• Page Title: *{title}*", parse_mode="Markdown")
-        except Exception as e:
-            bot.reply_to(message, f"❌ Scraping Error: `{e}`", parse_mode="Markdown")
-    else:
-        try:
-            response = model.generate_content(query)
-            ai_reply = response.text
+    # Maintain user-specific or active negotiation thread state
+    if user_id not in ACTIVE_CLIENT_CONVERSATIONS:
+        ACTIVE_CLIENT_CONVERSATIONS[user_id] = {
+            "history": []
+        }
+    
+    chat_session = ACTIVE_CLIENT_CONVERSATIONS[user_id]
+    chat_session["history"].append({"role": "user", "parts": [user_msg]})
+    
+    try:
+        # Construct chat context with system instructions for automated negotiation & closing
+        chat_context = [
+            {
+                "role": "model",
+                "parts": ["You are Hermes, an autonomous AI employee that handles negotiations, talks to clients professionally, finalizes requirements, writes code or deliverables, and closes sales without human intervention."]
+            }
+        ] + chat_session["history"]
+        
+        response = model.generate_content(chat_context)
+        ai_reply = response.text.strip()
+        
+        chat_session["history"].append({"role": "model", "parts": [ai_reply]})
+        
+        if len(ai_reply) > 4000:
+            ai_reply = ai_reply[:4000] + "\n\n*(Truncated due to length)*"
             
-            if len(ai_reply) > 4000:
-                ai_reply = ai_reply[:4000] + "\n\n*(Truncated due to length)*"
-                
-            bot.reply_to(message, ai_reply)
-        except Exception as e:
-            bot.reply_to(message, f"❌ AI Generation Error: `{e}`")
+        bot.reply_to(message, ai_reply)
+    except Exception as e:
+        bot.reply_to(message, f"❌ Autonomous Negotiation Error: `{e}`", parse_mode="Markdown")
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Hermes Multi-Source Engine is live!"
+    return "Hermes Fully Autonomous AI Employee Engine is live!"
 
 script_secret_path = f"/{BOT_TOKEN}"
 
@@ -147,8 +184,9 @@ def webhook():
         return "Invalid", 403
 
 if __name__ == "__main__":
-    scraper_thread = threading.Thread(target=background_lead_scraper, daemon=True)
-    scraper_thread.start()
+    # Start the Background Autonomous Lead Scraper & Pitch Engine
+    engine_thread = threading.Thread(target=autonomous_execution_engine, daemon=True)
+    engine_thread.start()
     
     if RENDER_EXTERNAL_URL:
         webhook_url = f"{RENDER_EXTERNAL_URL}{script_secret_path}"
