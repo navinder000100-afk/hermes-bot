@@ -11,23 +11,20 @@ import threading
 LOG_FILE = "revenue_machine.log"
 LEAD_CSV = "revenue_leads.csv"
 
-TELEGRAM_BOT_TOKEN = "8855388070:AAGX5TPJjB5p7jSfIdiz1GJv-VzAYHj7_6s"
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8855388070:AAGX5TPJjB5p7jSfIdiz1GJv-VzAYHj7_6s")
 
-# Yahan apne sabhi target Groups AUR Channels ki chat IDs ki list daal do
-# (Note: Channel mein post karne ke liye bot ko channel ka Admin banana zaroori hai)
-TELEGRAM_TARGET_CHAT_IDS = [
-    "8104262282",            # Aapka pehla group/channel
-    # "-100xxxxxxxxxx",      # Aur bhi groups ya channels yahan add kar sakte hain
-]
+# Render ke Environment Variables se chat/channel ID yahan uthegi
+TARGET_CHAT = os.environ.get("CHANNEL_ID", "-10044292540") 
+TELEGRAM_TARGET_CHAT_IDS = [TARGET_CHAT]
 
-UPI_ID = "navinder000100@oksbi"
+UPI_ID = os.environ.get("UPI_ID", "navinder000100@oksbi")
 PACKAGE_PRICE = "999"
 
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Hermas Multi-Target Broadcast Machine v3.1 Online 24/7!"
+    return "Hermas Multi-Target Broadcast Machine v3.3 Online 24/7!"
 
 def log_event(message):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -44,13 +41,14 @@ def send_telegram_broadcast_to_all(text):
         payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
         try:
             response = requests.post(url_base, json=payload, timeout=10)
+            log_event(f"API Response for {chat_id}: Status {response.status_code} - {response.text}")
             if response.status_code == 200:
                 success_count += 1
             else:
                 log_event(f"Failed for target {chat_id}: {response.text}")
         except Exception as e:
             log_event(f"Telegram error for target {chat_id}: {e}")
-        time.sleep(1) # Rate limit bachane ke liye gap
+        time.sleep(1)
         
     return success_count
 
@@ -96,15 +94,7 @@ def run_revenue_funnel():
     )
     
     success_count = send_telegram_broadcast_to_all(pitch_text)
-    
-    file_exists = os.path.exists(LEAD_CSV)
-    with open(LEAD_CSV, mode="a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["Timestamp", "Target Source", "Targets Reached", "Status", "Amount"])
-        writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), target, success_count, "Broadcast Sent", "0"])
-    
-    log_event(f"Broadcast completed. Successfully reached {success_count} targets (Groups/Channels).")
+    log_event(f"Broadcast completed. Successfully reached {success_count} targets.")
 
 def run_flask_server():
     port = int(os.environ.get("PORT", 5000))
@@ -115,14 +105,13 @@ if __name__ == "__main__":
     server_thread.daemon = True
     server_thread.start()
 
-    log_event("Hermas Multi-Target Broadcast Machine v3.1 Online.")
-    send_telegram_broadcast_to_all("⚡ **Hermas Agent v3.1** Multi-Group & Channel target system is now active 24/7!")
+    log_event("Hermas Multi-Target Broadcast Machine v3.3 Online.")
+    send_telegram_broadcast_to_all("⚡ **Hermas Agent v3.3** Connected Successfully to Channel via Environment Variables!")
 
     while True:
         try:
             run_revenue_funnel()
         except Exception as e:
-            log_event(f"Error: {e}")
+            log_event(f"Error in loop: {e}")
         
-        # Har 2 ghante mein sabhi targets par naya broadcast chalega
         time.sleep(7200)
