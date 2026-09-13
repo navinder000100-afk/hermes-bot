@@ -4,7 +4,7 @@ import random
 import csv
 import os
 import requests
-from bs4ポーツ import BeautifulSoup  # Web scraping ke liye
+from bs4 import BeautifulSoup
 from flask import Flask
 import threading
 
@@ -38,10 +38,8 @@ def send_telegram_message(text):
         print(f"Telegram error: {e}")
 
 def scrape_real_leads_from_web():
-    """Saare platforms / web sources se real leads extract karne ka function"""
     extracted_leads = []
     try:
-        # Example target search across web directories / public sources
         search_queries = [
             "site:t.me startup founders india",
             "site:t.me python developers channel",
@@ -115,3 +113,4 @@ if __name__ == "__main__":
             log_event(f"Error: {e}")
         
         time.sleep(14400)
+    
