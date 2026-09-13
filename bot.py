@@ -4,6 +4,7 @@ import random
 import csv
 import os
 import requests
+from bs4:: BeautifulSoup if False else BeautifulSoup # syntax safe fix
 from bs4 import BeautifulSoup
 from flask import Flask
 import threading
@@ -12,8 +13,13 @@ LOG_FILE = "revenue_machine.log"
 LEAD_CSV = "revenue_leads.csv"
 
 TELEGRAM_BOT_TOKEN = "8855388070:AAGX5TPJjB5p7jSfIdiz1GJv-VzAYHj7_6s"
-# Yahan us public group ya channel ki chat ID daalein jahan bot ko pitch bhejni hai (e.g., "-100xxxxxxxxxx")
-TELEGRAM_GROUP_CHAT_ID = "8104262282" 
+
+# Yahan apne sabhi target public groups ya channels ki chat IDs ki list daal do
+TELEGRAM_GROUP_CHAT_IDS = [
+    "8104262282",
+    # "-1001234567890",  <- Aur bhi groups ki ID yahan comma laga kar add kar sakte ho
+]
+
 UPI_ID = "navinder000100@oksbi"
 PACKAGE_PRICE = "999"
 
@@ -21,7 +27,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Hermas Group Broadcast Machine v3.0 Online 24/7!"
+    return "Hermas Multi-Group Broadcast Machine v3.0 Online 24/7!"
 
 def log_event(message):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -30,15 +36,23 @@ def log_event(message):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(log_msg + "\n")
 
-def send_telegram_broadcast(text):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_GROUP_CHAT_ID, "text": text, "parse_mode": "Markdown"}
-    try:
-        response = requests.post(url, json=payload)
-        return response.status_code == 200
-    except Exception as e:
-        print(f"Telegram error: {e}")
-        return False
+def send_telegram_broadcast_to_all(text):
+    success_count = 0
+    url_base = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    
+    for chat_id in TELEGRAM_GROUP_CHAT_IDS:
+        payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+        try:
+            response = requests.post(url_base, json=payload, timeout=10)
+            if response.status_code == 200:
+                success_count += 1
+            else:
+                log_event(f"Failed for group {chat_id}: {response.text}")
+        except Exception as e:
+            log_event(f"Telegram error for group {chat_id}: {e}")
+        time.sleep(1) # Telegram rate limit bachane ke liye chota gap
+        
+    return success_count
 
 def scrape_real_leads_from_web():
     extracted_leads = []
@@ -66,7 +80,7 @@ def scrape_real_leads_from_web():
         return []
 
 def run_revenue_funnel():
-    log_event("Scanning platforms and preparing high-conversion broadcast...")
+    log_event("Scanning platforms and preparing multi-group broadcast...")
     live_leads = scrape_real_leads_from_web()
     
     target = random.choice(live_leads) if live_leads else "@target_business_lead"
@@ -81,16 +95,16 @@ def run_revenue_funnel():
         f"Send screenshot of payment to activate system instantly."
     )
     
-    success = send_telegram_broadcast(pitch_text)
+    success_count = send_telegram_broadcast_to_all(pitch_text)
     
     file_exists = os.path.exists(LEAD_CSV)
     with open(LEAD_CSV, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["Timestamp", "Target Source", "Niche", "Status", "Amount"])
-        writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), target, chosen_niche, "Broadcast Sent" if success else "Failed", "0"])
+            writer.writerow(["Timestamp", "Target Source", "Groups Reached", "Status", "Amount"])
+        writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), target, success_count, "Multi-Group Broadcast Sent", "0"])
     
-    log_event(f"Broadcast deployment completed for source: {target}")
+    log_event(f"Broadcast completed. Successfully reached {success_count} groups.")
 
 def run_flask_server():
     port = int(os.environ.get("PORT", 5000))
@@ -101,8 +115,8 @@ if __name__ == "__main__":
     server_thread.daemon = True
     server_thread.start()
 
-    log_event("Hermas Group Broadcast Machine v3.0 Online.")
-    send_telegram_broadcast("⚡ **Hermas Agent v3.0** is now active and broadcasting automated pitches 24/7!")
+    log_event("Hermas Multi-Group Broadcast Machine v3.0 Online.")
+    send_telegram_broadcast_to_all("⚡ **Hermas Agent v3.0** Multi-Group target system is now active 24/7!")
 
     while True:
         try:
@@ -110,5 +124,5 @@ if __name__ == "__main__":
         except Exception as e:
             log_event(f"Error: {e}")
         
-        time.sleep(14400)
-            
+        # Har 2 ghante mein sabhi groups mein naya broadcast chalega
+        time.sleep(7200)
