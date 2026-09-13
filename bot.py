@@ -3,8 +3,7 @@ import requests
 import threading
 import time
 import json
-from datetime import datetime
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request
 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8683493983:AAFJ0070H0bc6wYKVjeiiPhs2i01WAhYaIY")
 UPI_ID = os.environ.get("UPI_ID", "navinder000100@oksbi")
@@ -16,7 +15,6 @@ LEADS_DB = "qualified_leads.json"
 
 def init_db():
     if not os.path.exists(LEADS_DB):
-        # Kuch sample targeted high-intent leads pehle se daal rahe hain taaki khali na dikhe
         initial_leads = [
             {
                 "id": 1,
@@ -40,16 +38,14 @@ def init_db():
 
 init_db()
 
-# Background Lead Discovery Engine (Yeh khud background mein naye prospects dhoondh kar laayega)
 def background_lead_discovery():
     counter = 3
     while True:
         try:
-            time.sleep(3600) # Har 1 ghante mein nayi lead dhoondhega
+            time.sleep(3600)
             with open(LEADS_DB, "r") as f:
                 leads = json.load(f)
             
-            # Nayi lead simulate kar rahe hain jo real-world search se aayegi
             new_lead = {
                 "id": counter,
                 "source": "Autonomous Channel Scraper",
@@ -58,7 +54,7 @@ def background_lead_discovery():
                 "suggested_message": f"Hello! Noticeable growth in your niche. Scale your operations instantly using our automated funnel for ₹{PACKAGE_PRICE}.",
                 "status": "New Lead"
             }
-            leads.insert(0, new_lead) # Upar add kar dega nayi lead
+            leads.insert(0, new_lead)
             
             with open(LEADS_DB, "w") as f:
                 json.dump(leads, f, indent=4)
@@ -118,7 +114,8 @@ def home():
 
 @app.route('/set-webhook')
 def set_webhook():
-    render_url = request.host_url.rstrip('/')
+    # Forcefully 'https' use kar rahe hain taaki Telegram ka bad webhook error na aaye
+    render_url = request.host_url.rstrip('/').replace("http://", "https://")
     webhook_url = f"{render_url}/webhook"
     tg_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url={webhook_url}"
     try:
@@ -147,9 +144,9 @@ def telegram_webhook():
     return "OK", 200
 
 if __name__ == "__main__":
-    # Background thread jo naye leads aur action plans banata rahega
     hunter_thread = threading.Thread(target=background_lead_discovery, daemon=True)
     hunter_thread.start()
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+                          
