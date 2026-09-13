@@ -114,7 +114,6 @@ def home():
 
 @app.route('/set-webhook')
 def set_webhook():
-    # Forcefully 'https' use kar rahe hain taaki Telegram ka bad webhook error na aaye
     render_url = request.host_url.rstrip('/').replace("http://", "https://")
     webhook_url = f"{render_url}/webhook"
     tg_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook?url={webhook_url}"
@@ -124,9 +123,11 @@ def set_webhook():
     except Exception as e:
         return f"Setup failed: {e}"
 
+# Dono routes handle kar liye hain taaki 404 error na aaye
 @app.route('/webhook', methods=['POST'])
+@app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
 def telegram_webhook():
-    data = request.get_json()
+    data = request.get_json(silent=True)
     if data and "message" in data:
         message = data["message"]
         chat_id = message["chat"]["id"]
@@ -149,4 +150,4 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-                          
+        
