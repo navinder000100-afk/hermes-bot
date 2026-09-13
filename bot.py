@@ -4,7 +4,6 @@ import random
 import csv
 import os
 import requests
-from bs4:: BeautifulSoup if False else BeautifulSoup # syntax safe fix
 from bs4 import BeautifulSoup
 from flask import Flask
 import threading
@@ -14,10 +13,11 @@ LEAD_CSV = "revenue_leads.csv"
 
 TELEGRAM_BOT_TOKEN = "8855388070:AAGX5TPJjB5p7jSfIdiz1GJv-VzAYHj7_6s"
 
-# Yahan apne sabhi target public groups ya channels ki chat IDs ki list daal do
-TELEGRAM_GROUP_CHAT_IDS = [
-    "8104262282",
-    # "-1001234567890",  <- Aur bhi groups ki ID yahan comma laga kar add kar sakte ho
+# Yahan apne sabhi target Groups AUR Channels ki chat IDs ki list daal do
+# (Note: Channel mein post karne ke liye bot ko channel ka Admin banana zaroori hai)
+TELEGRAM_TARGET_CHAT_IDS = [
+    "8104262282",            # Aapka pehla group/channel
+    # "-100xxxxxxxxxx",      # Aur bhi groups ya channels yahan add kar sakte hain
 ]
 
 UPI_ID = "navinder000100@oksbi"
@@ -27,7 +27,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Hermas Multi-Group Broadcast Machine v3.0 Online 24/7!"
+    return "Hermas Multi-Target Broadcast Machine v3.1 Online 24/7!"
 
 def log_event(message):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -40,17 +40,17 @@ def send_telegram_broadcast_to_all(text):
     success_count = 0
     url_base = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     
-    for chat_id in TELEGRAM_GROUP_CHAT_IDS:
+    for chat_id in TELEGRAM_TARGET_CHAT_IDS:
         payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
         try:
             response = requests.post(url_base, json=payload, timeout=10)
             if response.status_code == 200:
                 success_count += 1
             else:
-                log_event(f"Failed for group {chat_id}: {response.text}")
+                log_event(f"Failed for target {chat_id}: {response.text}")
         except Exception as e:
-            log_event(f"Telegram error for group {chat_id}: {e}")
-        time.sleep(1) # Telegram rate limit bachane ke liye chota gap
+            log_event(f"Telegram error for target {chat_id}: {e}")
+        time.sleep(1) # Rate limit bachane ke liye gap
         
     return success_count
 
@@ -80,7 +80,7 @@ def scrape_real_leads_from_web():
         return []
 
 def run_revenue_funnel():
-    log_event("Scanning platforms and preparing multi-group broadcast...")
+    log_event("Scanning platforms and preparing multi-target broadcast...")
     live_leads = scrape_real_leads_from_web()
     
     target = random.choice(live_leads) if live_leads else "@target_business_lead"
@@ -101,10 +101,10 @@ def run_revenue_funnel():
     with open(LEAD_CSV, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["Timestamp", "Target Source", "Groups Reached", "Status", "Amount"])
-        writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), target, success_count, "Multi-Group Broadcast Sent", "0"])
+            writer.writerow(["Timestamp", "Target Source", "Targets Reached", "Status", "Amount"])
+        writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), target, success_count, "Broadcast Sent", "0"])
     
-    log_event(f"Broadcast completed. Successfully reached {success_count} groups.")
+    log_event(f"Broadcast completed. Successfully reached {success_count} targets (Groups/Channels).")
 
 def run_flask_server():
     port = int(os.environ.get("PORT", 5000))
@@ -115,8 +115,8 @@ if __name__ == "__main__":
     server_thread.daemon = True
     server_thread.start()
 
-    log_event("Hermas Multi-Group Broadcast Machine v3.0 Online.")
-    send_telegram_broadcast_to_all("⚡ **Hermas Agent v3.0** Multi-Group target system is now active 24/7!")
+    log_event("Hermas Multi-Target Broadcast Machine v3.1 Online.")
+    send_telegram_broadcast_to_all("⚡ **Hermas Agent v3.1** Multi-Group & Channel target system is now active 24/7!")
 
     while True:
         try:
@@ -124,6 +124,5 @@ if __name__ == "__main__":
         except Exception as e:
             log_event(f"Error: {e}")
         
-        # Har 2 ghante mein sabhi groups mein naya broadcast chalega
+        # Har 2 ghante mein sabhi targets par naya broadcast chalega
         time.sleep(7200)
-        
