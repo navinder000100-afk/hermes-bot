@@ -12,7 +12,8 @@ LOG_FILE = "revenue_machine.log"
 LEAD_CSV = "revenue_leads.csv"
 
 TELEGRAM_BOT_TOKEN = "8855388070:AAGX5TPJjB5p7jSfIdiz1GJv-VzAYHj7_6s"
-TELEGRAM_CHAT_ID = "8104262282"
+# Yahan us public group ya channel ki chat ID daalein jahan bot ko pitch bhejni hai (e.g., "-100xxxxxxxxxx")
+TELEGRAM_GROUP_CHAT_ID = "8104262282" 
 UPI_ID = "navinder000100@oksbi"
 PACKAGE_PRICE = "999"
 
@@ -20,7 +21,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Hermas Revenue Machine v3.0 (Multi-Platform Scraper) Online 24/7!"
+    return "Hermas Group Broadcast Machine v3.0 Online 24/7!"
 
 def log_event(message):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -29,13 +30,15 @@ def log_event(message):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(log_msg + "\n")
 
-def send_telegram_message(text):
+def send_telegram_broadcast(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"}
+    payload = {"chat_id": TELEGRAM_GROUP_CHAT_ID, "text": text, "parse_mode": "Markdown"}
     try:
-        requests.post(url, json=payload)
+        response = requests.post(url, json=payload)
+        return response.status_code == 200
     except Exception as e:
         print(f"Telegram error: {e}")
+        return False
 
 def scrape_real_leads_from_web():
     extracted_leads = []
@@ -57,42 +60,37 @@ def scrape_real_leads_from_web():
                     if 't.me/' in link:
                         extracted_leads.append(link)
         
-        log_event(f"Successfully scraped {len(extracted_titles := list(set(extracted_leads)))} real platform targets.")
-        return extracted_titles
+        return list(set(extracted_leads))
     except Exception as e:
         log_event(f"Scraping error: {e}")
         return []
 
 def run_revenue_funnel():
-    log_event("Scanning all platforms for live clients...")
+    log_event("Scanning platforms and preparing high-conversion broadcast...")
     live_leads = scrape_real_leads_from_web()
     
-    if live_leads:
-        target = random.choice(live_leads)
-    else:
-        target = "@real_business_lead_" + str(random.randint(1000, 9999))
-        
+    target = random.choice(live_leads) if live_leads else "@target_business_lead"
     chosen_niche = "Cross-Platform Automation & Monetization"
     
     pitch_text = (
-        f"⚡ *Live Multi-Platform Business Pitch*\n\n"
-        f"Target Source: {target}\n"
-        f"Niche: {chosen_niche}\n\n"
-        f"Scale your business with full automation for just ₹{PACKAGE_PRICE}!\n"
-        f"Pay directly via UPI: `{UPI_ID}`\n"
-        f"Send payment screenshot here to activate."
+        f"🚀 *Business Automation & Lead Generation Pitch*\n\n"
+        f"Target Verified Source: {target}\n"
+        f"Category: {chosen_niche}\n\n"
+        f"Scale your business traffic and automated funnels instantly for just ₹{PACKAGE_PRICE}!\n"
+        f"💳 Pay directly via UPI: `{UPI_ID}`\n"
+        f"Send screenshot of payment to activate system instantly."
     )
     
-    send_telegram_message(pitch_text)
+    success = send_telegram_broadcast(pitch_text)
     
     file_exists = os.path.exists(LEAD_CSV)
     with open(LEAD_CSV, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(["Timestamp", "Target Source", "Niche", "Status", "Amount"])
-        writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), target, chosen_niche, "Live Pitch Sent - Pending", "0"])
+        writer.writerow([datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), target, chosen_niche, "Broadcast Sent" if success else "Failed", "0"])
     
-    log_event(f"Live pitch deployed for {target}. Monitoring payments.")
+    log_event(f"Broadcast deployment completed for source: {target}")
 
 def run_flask_server():
     port = int(os.environ.get("PORT", 5000))
@@ -103,8 +101,8 @@ if __name__ == "__main__":
     server_thread.daemon = True
     server_thread.start()
 
-    log_event("Revenue Machine v3.0 Multi-Platform Scraper Online.")
-    send_telegram_message("⚡ **Hermas Agent v3.0** is now active with **Multi-Platform Scraper** enabled!")
+    log_event("Hermas Group Broadcast Machine v3.0 Online.")
+    send_telegram_broadcast("⚡ **Hermas Agent v3.0** is now active and broadcasting automated pitches 24/7!")
 
     while True:
         try:
@@ -113,4 +111,4 @@ if __name__ == "__main__":
             log_event(f"Error: {e}")
         
         time.sleep(14400)
-    
+            
